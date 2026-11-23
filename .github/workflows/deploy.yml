@@ -1,0 +1,46 @@
+# NYILVÁNOS tároló (pikkdama): ebben nincs játékkód. Ez a folyamat a privát tárolóból
+# (pikkdama-forras) letölti a forrást, tömörített változatot készít belőle, és közzéteszi a GitHub Pages-en.
+name: Weboldal közzététele
+
+on:
+  repository_dispatch:
+    types: [forras-frissult]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Forrás letöltése a privát tárolóból
+        uses: actions/checkout@v4
+        with:
+          repository: bartusbende/pikkdama-forras
+          token: ${{ secrets.FORRAS_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Tömörített weboldal készítése
+        run: node build.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
